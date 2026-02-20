@@ -30,10 +30,13 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:8080",       # Vite dev server
+        "http://localhost:8081",       # Vite dev fallback
         "http://localhost:5173",       # Vite default
         "http://localhost:3000",       # Fallback
         "http://127.0.0.1:8080",
         "http://127.0.0.1:5173",
+        "https://campus-connect-os.vercel.app",  # Vercel production
+        "https://*.vercel.app",        # Vercel preview deploys
     ],
     allow_credentials=True,
     allow_methods=["*"],
