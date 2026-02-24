@@ -6,6 +6,10 @@ AI-powered campus travel & payments platform for Indian college students.
 Run: uvicorn main:app --reload --port 8000
 Docs: http://localhost:8000/docs
 """
+import os
+import asyncio
+import httpx
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -16,6 +20,29 @@ load_dotenv()
 # Import routers
 from routers import dashboard, yatra, gharwaapsi, concession, campuspay, festpass, kharcha
 
+# ── Keep-Alive Ping (prevents Render free tier sleep) ─────
+SELF_URL = os.environ.get("RENDER_EXTERNAL_URL", os.environ.get("SELF_URL", ""))
+
+async def keep_alive():
+    """Ping self every 14 min to prevent Render free tier from sleeping."""
+    if not SELF_URL:
+        return  # Only run in production where URL is set
+    await asyncio.sleep(30)  # Wait for startup
+    async with httpx.AsyncClient() as client:
+        while True:
+            try:
+                await client.get(f"{SELF_URL}/", timeout=10)
+                print(f"[keep-alive] pinged {SELF_URL} ✅")
+            except Exception as e:
+                print(f"[keep-alive] ping failed: {e}")
+            await asyncio.sleep(14 * 60)  # 14 minutes
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(keep_alive())
+    yield
+    task.cancel()
+
 # ── App Configuration ──────────────────────────────────────
 app = FastAPI(
     title="Paytm Campus OS API",
@@ -23,6 +50,7 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # ── CORS Middleware ────────────────────────────────────────
